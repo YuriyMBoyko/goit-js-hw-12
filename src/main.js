@@ -54,58 +54,53 @@ refs.loadMoreBtn.addEventListener('click', () => {
   loadImages(null, queryText, pageNumber);
 });
 
-function loadImages(event, query, page) {
+async function loadImages(event, query, page) {
   hideLoadMoreButton();
   showLoader();
 
   let totalHits = 0;
 
-  getImagesByQuery(query, page)
-    .then(data => {
-      totalHits = data.totalHits;
-      cardShown += data.hits.length;
-      if (data.hits.length === 0) {
-        iziToast.error({
-          title: 'Error',
-          message: messageNoImagesFound,
-          position: 'topRight'
-        })
-      } else {
-        createGallery(data.hits);
-        smoothScroll();
-      }
-    })
-    .catch(error => {
-      console.log(error);
+  try{
+    const data = await getImagesByQuery(query, page);
+    totalHits = data.totalHits;
+    cardShown += data.hits.length;
+    if (data.hits.length === 0) {
       iziToast.error({
         title: 'Error',
-        message: messageConnectError,
+        message: messageNoImagesFound,
+        position: 'topRight'
+      })
+    } else {
+      createGallery(data.hits);
+      smoothScroll();
+    }
+  } catch(error) {
+    iziToast.error({
+      title: 'Error',
+      message: messageConnectError,
+      position: 'topRight'
+    });
+  } finally {
+    hideLoader();
+    if (totalHits > cardShown) {
+      showLoadMoreButton();
+    } else if (totalHits !== 0) {
+      iziToast.info({
+        title: 'Info',
+        message: messageEndReached,
         position: 'topRight'
       });
-    })
-    .finally(() => {
-      hideLoader();
-      if (totalHits > cardShown) {
-        showLoadMoreButton();
-      } else if (totalHits !== 0) {
-        iziToast.info({
-          title: 'Info',
-          message: messageEndReached,
-          position: 'topRight'
-        });
-      }
-      if (event !== null) {
-        event.target.reset();
-      }
-    })
+    }
+    if (event !== null) {
+      event.target.reset();
+    }
+  }
 };
 
 function smoothScroll() {
   const card = document.querySelector('.gallery-item');
   if (card) {
-    console.log(card);
     const cardHeight = card.getBoundingClientRect().height;
-    console.log(cardHeight);
     window.scrollBy({
       top: 2 * cardHeight,
       behavior: 'smooth'

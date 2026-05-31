@@ -6,7 +6,7 @@ export async function getImagesByQuery(query, page) {
   const pixabayApiKey = '56037316-398dfc4475139038527660650';
   const url = `https://pixabay.com/api/`;
 
-  return await axios.get(url,
+  const response = await axios.get(url,
     {
       params: {
         key: pixabayApiKey,
@@ -18,8 +18,7 @@ export async function getImagesByQuery(query, page) {
         per_page: imagesPerPage 
       }
     }
-  )
-  .then(response => {
-    return response.data;
-  });
+  );
+
+  return response.data;
 }
