@@ -1,5 +1,5 @@
-import iziToast from "izitoast";
-import "izitoast/dist/css/iziToast.min.css";
+import iziToast from 'izitoast';
+import 'izitoast/dist/css/iziToast.min.css';
 
 import { getImagesByQuery } from './js/pixabay-api.js';
 
@@ -7,16 +7,24 @@ import {
   createGallery, 
   clearGallery, 
   showLoader, 
-  hideLoader 
+  hideLoader,
+  showLoadMoreButton,
+  hideLoadMoreButton 
 } from './js/render-functions.js';
 
 const refs = {
-  searchForm: document.querySelector('.form')
+  searchForm: document.querySelector('.form'),
+  loadMoreBtn: document.querySelector('.load-more-btn')
 }
+
+let queryText = '';
+let pageNumber = 1;
+let cardShown = 0;
 
 const messageNoQueryEntered = 'Please, enter query for search!';
 const messageNoImagesFound = 'Sorry, there are no images matching your search query. Please try again!';
 const messageConnectError = 'An error occurred. Please, try again later!';
+const messageEndReached = 'We\'re sorry, but you\'ve reached the end of search results.';
 
 refs.searchForm.addEventListener('submit', event => {
   event.preventDefault();
@@ -32,11 +40,30 @@ refs.searchForm.addEventListener('submit', event => {
     return;
   }
 
+  queryText = query
+  pageNumber = 1;
+  cardShown = 0;
+
   clearGallery();
+
+  loadImages(event, queryText, pageNumber);
+});
+
+refs.loadMoreBtn.addEventListener('click', () => {
+  pageNumber++;
+  loadImages(null, queryText, pageNumber);
+});
+
+function loadImages(event, query, page) {
+  hideLoadMoreButton();
   showLoader();
 
-  getImagesByQuery(query)
+  let totalHits = 0;
+
+  getImagesByQuery(query, page)
     .then(data => {
+      totalHits = data.totalHits;
+      cardShown += data.hits.length;
       if (data.hits.length === 0) {
         iziToast.error({
           title: 'Error',
@@ -45,9 +72,11 @@ refs.searchForm.addEventListener('submit', event => {
         })
       } else {
         createGallery(data.hits);
+        smoothScroll();
       }
     })
     .catch(error => {
+      console.log(error);
       iziToast.error({
         title: 'Error',
         message: messageConnectError,
@@ -56,6 +85,30 @@ refs.searchForm.addEventListener('submit', event => {
     })
     .finally(() => {
       hideLoader();
-      event.target.reset();
+      if (totalHits > cardShown) {
+        showLoadMoreButton();
+      } else if (totalHits !== 0) {
+        iziToast.info({
+          title: 'Info',
+          message: messageEndReached,
+          position: 'topRight'
+        });
+      }
+      if (event !== null) {
+        event.target.reset();
+      }
     })
-});
+};
+
+function smoothScroll() {
+  const card = document.querySelector('.gallery-item');
+  if (card) {
+    console.log(card);
+    const cardHeight = card.getBoundingClientRect().height;
+    console.log(cardHeight);
+    window.scrollBy({
+      top: 2 * cardHeight,
+      behavior: 'smooth'
+    });
+  }
+}
